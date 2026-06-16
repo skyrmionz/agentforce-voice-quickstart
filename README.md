@@ -37,11 +37,22 @@ Open [PROMPT.md](./PROMPT.md), fill in your org details, and paste it into Claud
 # Clone and run setup
 git clone https://github.com/skyrmionz/agentforce-voice-quickstart.git
 cd agentforce-voice-quickstart
+
+# Full install (all skills):
 ./setup.sh
+
+# Or install just what you need:
+./setup.sh --bundle voice-agent         # Voice agent essentials
+./setup.sh --bundle digital-channels    # All messaging channels
+./setup.sh --bundle service-ai          # Service AI features
+./setup.sh --install agent-on-native-voice --install omni-routing-supervisor  # Pick specific skills
+./setup.sh --list                       # See all available skills
 
 # Restart Claude Code, then in a new session:
 # Paste the prompt from PROMPT.md (setup.sh prints it at the end)
 ```
+
+See [SKILLS.md](./SKILLS.md) for the full catalog with descriptions and headless coverage %.
 
 ---
 
