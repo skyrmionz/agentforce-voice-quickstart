@@ -15,6 +15,18 @@ This repo gives Claude Code the skills and context to stand up a working inbound
 
 ---
 
+## Prerequisites
+
+| Requirement | How to get it |
+|---|---|
+| Claude Code | `brew install claude` or [claude.ai/code](https://claude.ai/code) |
+| Salesforce CLI (`sf`) | `brew install sf` |
+| A Salesforce org with AFCC licenses | CDO, SDO, or a provisioned OrgFarm/trial org |
+| A provisioned phone number | Setup > Communication Channels > Numbers (Status: Live) |
+| GHE access (for full skill suite) | VPN + `git.soma.salesforce.com` credentials |
+
+---
+
 ## Three ways to get started
 
 ### Option 1 — Hand this entire repo to Claude (easiest)
@@ -53,18 +65,6 @@ cd agentforce-voice-quickstart
 ```
 
 See [SKILLS.md](./SKILLS.md) for the full catalog with descriptions and headless coverage %.
-
----
-
-## Prerequisites
-
-| Requirement | How to get it |
-|---|---|
-| Claude Code | `brew install claude` or [claude.ai/code](https://claude.ai/code) |
-| Salesforce CLI (`sf`) | `brew install sf` |
-| A Salesforce org with AFCC licenses | CDO, SDO, or a provisioned OrgFarm/trial org |
-| A provisioned phone number | Setup > Communication Channels > Numbers (Status: Live) |
-| GHE access (for full skill suite) | VPN + `git.soma.salesforce.com` credentials |
 
 ---
 
