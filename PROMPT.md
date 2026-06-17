@@ -99,18 +99,19 @@ Present me with these options:
    - Real phone call experience — customers dial a number and talk to the agent
    - Two sub-options:
 
-     **B1) Amazon Connect (Recommended for phone)**
-     - Full warm transfer to live agents — the only path that supports real call escalation
+     **B1) Native PSTN (Recommended — simplest phone path)**
+     - Straightforward setup — just a provisioned Agentforce Voice phone number
+     - Requires: a provisioned PSTN phone number (status: Live)
+     - ~100% automated by Claude (after phone number is provisioned)
+     - Escalation routes to Omni-Channel queue (call disconnects and re-queues)
+     - Best for: quick voice testing, demos, most use cases
+
+     **B2) Amazon Connect (Advanced — warm transfer to live agents)**
+     - Full warm transfer to live agents — call stays connected during escalation
      - Requires: Amazon Connect contact center configured in your org (Claude guides you through setup)
      - Call flow: Customer dials Amazon Connect DID → Connect forwards to Agentforce Voice → AI agent handles → escalation returns call to Connect → routes to human rep
-     - Best for: production deployments, demos with escalation, realistic end-user experience
-
-     **B2) Native PSTN (Simpler, no live transfer)**
-     - Simpler setup — just a provisioned Agentforce Voice phone number
-     - Requires: a provisioned PSTN phone number (status: Live)
-     - Limitation: escalation disconnects the call and routes to queue (no warm transfer)
-     - ~100% automated by Claude (after phone number is provisioned)
-     - Best for: quick voice testing without Amazon Connect overhead
+     - More setup steps (~20 min manual + waiting for AWS provisioning emails)
+     - Best for: production deployments requiring seamless human escalation
 
    - Phone provisioning path: Setup → Service → Voice → Agentforce Voice Setup
 
@@ -139,13 +140,13 @@ Path A only (ECV2 Voice):
 7. What website domain will host the chat widget? (e.g., your Experience Cloud site URL, or any domain you control)
 
 Path B only (PSTN):
-7. Do you want Amazon Connect (B1 — warm transfer to live agents) or Native PSTN (B2 — simpler, no live transfer)?
-8. Is Amazon Connect already configured in your org? (Check: Setup → Voice → Amazon Contact Centers — do you see a contact center listed?)
-   - If yes: what's your Amazon Connect DID phone number? (the number customers will dial)
-   - If no: I'll guide you through the full Amazon Connect setup (takes ~20 min of manual steps + waiting for AWS provisioning emails)
-9. Do you have an Agentforce Voice phone number? (Check: Setup → Service → Agentforce Voice Setup)
+7. Do you want Native PSTN (B1 — recommended, simpler setup) or Amazon Connect (B2 — advanced, warm transfer to live agents)?
+8. Do you have an Agentforce Voice phone number? (Check: Setup → Service → Agentforce Voice Setup)
    - If yes: provide it (E.164 format, e.g. +14155551234)
    - If no: I'll guide you through provisioning one
+9. (B2 only) Is Amazon Connect already configured in your org? (Check: Setup → Voice → Amazon Contact Centers — do you see a contact center listed?)
+   - If yes: what's your Amazon Connect DID phone number? (the number customers will dial)
+   - If no: I'll guide you through the full Amazon Connect setup (takes ~20 min of manual steps + waiting for AWS provisioning emails)
 
 Path C: ask all of the above (7 from Path A + questions from Path B).
 
@@ -213,7 +214,51 @@ With my answers, execute the full build using the installed skills.
 
 === PATH B: PSTN Voice ===
 
---- PATH B1: Amazon Connect (warm transfer to live agents) ---
+--- PATH B1: Native PSTN (Recommended — simplest phone path) ---
+
+1. **[MANUAL — Guide me] Provision an Agentforce Voice phone number:**
+   - Setup → Service → Voice → Agentforce Voice Setup
+   - Click "New Number" → claim a number → wait for status "Live"
+
+2. **Create the agent** — Use the afv-pstn-forward skill:
+   - Deploy EinsteinGptSettings (enable platform + all 4 fields)
+   - Assign permission sets
+   - Create agent with `plannerType=Atlas__VoiceAgent`
+   - Add BOTH `Messaging` AND `Telephony` plannerSurfaces with escalation flow references
+   - Add topics + Escalation topic with `canEscalate=true`
+   - Activate
+
+3. **Create Routing Config + Queue** — Use afv-pstn-forward skill:
+   - RoutingModel = `ExternalRouting` (NOT LeastActive — that breaks PSTN routing)
+   - QueueSObject = VoiceCall
+   - Add my user as queue member
+
+4. **Deploy Escalation Flow** — Use afv-pstn-forward skill:
+   - routingType = `QueueBased`
+   - serviceChannelDevName = `sfdc_phone`
+   - MUST deploy BEFORE the planner that references it
+
+5. **Deploy Inbound Voice Routing Flow** — Use afv-pstn-forward skill:
+   - routingType = `Copilot`
+   - copilotId.setupReferenceType = `BotDefinition`
+   - serviceChannelLabel = `Phone` (NOT `Voice Call`)
+
+6. **Create MessagingChannel (PstnVoice)** — Use afv-pstn-forward skill:
+   - MessageType = `PstnVoice` (NOT `Phone`)
+   - MessagingPlatformKey = phone number
+   - SessionHandlerId = FlowDefinition ID (300... prefix, NOT Flow version 301...)
+   - FallbackQueueId = queue from step 3
+   - IsActive = true
+   - Create via REST POST (not Metadata API deploy)
+
+7. **Verify** — Run SOQL probes:
+   ```
+   sf data query --query "SELECT Id, DeveloperName, SessionHandlerId, FallbackQueueId FROM MessagingChannel WHERE MessageType='PstnVoice'"
+   sf data query --query "SELECT Id, ActiveVersionId FROM FlowDefinition WHERE DeveloperName LIKE '%<agent_name>%'" --use-tooling-api
+   sf data query --query "SELECT Id, GroupId, UserOrGroupId FROM GroupMember WHERE UserOrGroupId='<my-user-id>'"
+   ```
+
+--- PATH B2: Amazon Connect (Advanced — warm transfer to live agents) ---
 
 Phase 1 — Set up Amazon Connect (if not already configured):
 
@@ -251,7 +296,7 @@ Phase 1 — Set up Amazon Connect (if not already configured):
    - In Connect console: Channels → Phone Numbers → Claim a number
    - Country: United States (+1), Type: DID
    - Select any available number
-   - Assign Inbound Contact Flow: "Sample SCV Inbound Flow" (temporary — replaced in step 11)
+   - Assign Inbound Contact Flow: "Sample SCV Inbound Flow" (temporary — replaced in step 15)
    - Click Save
    - NOTE THIS NUMBER — this is the Amazon Connect DID that customers will dial
 
@@ -329,50 +374,6 @@ Phase 3 — Wire the routing (programmatic + manual):
     sf data query --query "SELECT Id FROM CallCenter" --target-org <alias>
     ```
 
---- PATH B2: Native PSTN (simpler, no live transfer) ---
-
-1. **[MANUAL — Guide me] Provision an Agentforce Voice phone number:**
-   - Setup → Service → Voice → Agentforce Voice Setup
-   - Click "New Number" → claim a number → wait for status "Live"
-
-2. **Create the agent** — Use the afv-pstn-forward skill:
-   - Deploy EinsteinGptSettings (enable platform + all 4 fields)
-   - Assign permission sets
-   - Create agent with `plannerType=Atlas__VoiceAgent`
-   - Add BOTH `Messaging` AND `Telephony` plannerSurfaces with escalation flow references
-   - Add topics + Escalation topic with `canEscalate=true`
-   - Activate
-
-3. **Create Routing Config + Queue** — Use afv-pstn-forward skill:
-   - RoutingModel = `ExternalRouting` (NOT LeastActive — that breaks PSTN routing)
-   - QueueSObject = VoiceCall
-   - Add my user as queue member
-
-4. **Deploy Escalation Flow** — Use afv-pstn-forward skill:
-   - routingType = `QueueBased`
-   - serviceChannelDevName = `sfdc_phone`
-   - MUST deploy BEFORE the planner that references it
-
-5. **Deploy Inbound Voice Routing Flow** — Use afv-pstn-forward skill:
-   - routingType = `Copilot`
-   - copilotId.setupReferenceType = `BotDefinition`
-   - serviceChannelLabel = `Phone` (NOT `Voice Call`)
-
-6. **Create MessagingChannel (PstnVoice)** — Use afv-pstn-forward skill:
-   - MessageType = `PstnVoice` (NOT `Phone`)
-   - MessagingPlatformKey = phone number
-   - SessionHandlerId = FlowDefinition ID (300... prefix, NOT Flow version 301...)
-   - FallbackQueueId = queue from step 3
-   - IsActive = true
-   - Create via REST POST (not Metadata API deploy)
-
-7. **Verify** — Run SOQL probes:
-   ```
-   sf data query --query "SELECT Id, DeveloperName, SessionHandlerId, FallbackQueueId FROM MessagingChannel WHERE MessageType='PstnVoice'"
-   sf data query --query "SELECT Id, ActiveVersionId FROM FlowDefinition WHERE DeveloperName LIKE '%<agent_name>%'" --use-tooling-api
-   sf data query --query "SELECT Id, GroupId, UserOrGroupId FROM GroupMember WHERE UserOrGroupId='<my-user-id>'"
-   ```
-
 === PATH C: Both ===
 
 Do Path A first (immediate voice testing via widget), then Path B (add phone when ready).
@@ -389,19 +390,19 @@ Path A testing:
 - Talk to your agent — test the happy path and escalation
 - Say "transfer me to an agent" to test escalation
 
-Path B1 testing (Amazon Connect):
-- Call the AMAZON CONNECT DID number (NOT the Agentforce Voice number)
+Path B1 testing (Native PSTN):
+- Call the Agentforce Voice provisioned phone number
+- Talk to your agent — test the happy path and escalation
+- Say "transfer me to a real person" to test escalation
+- Check Omni-Channel in your org to see escalated calls arrive in the queue
+
+Path B2 testing (Amazon Connect):
+- Call the AMAZON CONNECT DID number (NOT the Agentforce Voice number directly)
 - Amazon Connect receives the call and forwards to Agentforce Voice
 - Talk to your agent — test the happy path
 - Say "transfer me to a real person" to test escalation
 - On escalation: call returns to Amazon Connect → routes to human rep via Omni-Channel
 - Open Service Console → set status to Available in Omni-Channel utility bar → receive the escalated call
-
-Path B2 testing (Native PSTN):
-- Call the Agentforce Voice provisioned phone number directly
-- Talk to your agent — test the happy path and escalation
-- Say "transfer me to a real person" to test escalation
-- Note: escalation disconnects and routes to queue (no warm transfer)
 
 Run automated tests:
 - Use /testing-agentforce to create a test suite covering: greeting, topic routing, escalation trigger, out-of-scope refusal

@@ -17,7 +17,7 @@ Browse and install individual skills. Use `./setup.sh --install <skill-name>` or
 
 > **Note on ECV2 Voice:** The `agent-on-enhanced-chat-v2` skill handles channel wiring and widget deployment (~88% headless). Enabling voice mode on the channel requires Agentforce Builder UI — Claude will guide you through the clicks. The `isVoiceModeEnabled` metadata field cannot be deployed via API.
 
-> **Note on Amazon Connect (Path B1):** The `afv-pstn-forward` skill handles the Salesforce-side setup (agent, flows, channel wiring). Amazon Connect setup (contact center creation, phone number claiming, contact flow configuration) is guided manually by Claude — there is no dedicated skill for the AWS side. Amazon Connect is the preferred phone path because it supports warm transfer to live agents.
+> **Note on Amazon Connect (Path B2):** The `afv-pstn-forward` skill handles the Salesforce-side setup (agent, flows, channel wiring). Amazon Connect setup (contact center creation, phone number claiming, contact flow configuration) is guided manually by Claude — there is no dedicated skill for the AWS side. Amazon Connect is the advanced phone path for production use cases requiring warm transfer to live agents.
 
 ## Agent Creation & Wiring
 
