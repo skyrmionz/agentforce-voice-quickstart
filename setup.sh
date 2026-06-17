@@ -59,10 +59,15 @@ SKILL_REGISTRY=(
 )
 
 # ---------- bundle definitions ----------
-BUNDLE_VOICE_AGENT="agentforce-agent-creation agent-on-native-voice omni-routing-supervisor voice-channel-omni-queue transcription-recording"
+# Path A: ECV2 Voice Widget (no phone needed)
+BUNDLE_VOICE_ECV2="agentforce-agent-creation agent-on-enhanced-chat-v2 omni-routing-supervisor enhanced-chat-v2"
+# Path B: PSTN Phone Call
+BUNDLE_VOICE_AGENT="agentforce-agent-creation agent-on-native-voice afv-pstn-forward omni-routing-supervisor voice-channel-omni-queue transcription-recording"
+# Path C: Both
+BUNDLE_VOICE_ALL="agentforce-agent-creation agent-on-native-voice afv-pstn-forward agent-on-enhanced-chat-v2 omni-routing-supervisor voice-channel-omni-queue transcription-recording enhanced-chat-v2"
 BUNDLE_DIGITAL="enhanced-chat enhanced-chat-v2 sms-channel whatsapp-channel line-channel apple-messages-channel facebook-messenger-channel agent-on-3p-channels agent-on-enhanced-chat agent-on-enhanced-chat-v2"
 BUNDLE_SERVICE_AI="service-ai-grounding agentforce-service-assistant einstein-article-recommendations einstein-service-replies einstein-conversation-insights conversation-mining voice-messaging-nba knowledge-creation real-time-translations work-summaries"
-BUNDLE_FULL="$BUNDLE_VOICE_AGENT $BUNDLE_DIGITAL $BUNDLE_SERVICE_AI voice-reports afv-pstn-forward"
+BUNDLE_FULL="$BUNDLE_VOICE_ALL $BUNDLE_DIGITAL $BUNDLE_SERVICE_AI voice-reports"
 
 # ---------- args ----------
 MODE="full"
@@ -83,7 +88,7 @@ while [[ $# -gt 0 ]]; do
         --bundle)
             MODE="bundle"
             shift
-            [[ $# -gt 0 ]] || { err "--bundle requires a name (voice-agent|digital-channels|service-ai|full)"; exit 2; }
+            [[ $# -gt 0 ]] || { err "--bundle requires a name (voice-ecv2|voice-agent|voice-all|digital-channels|service-ai|full)"; exit 2; }
             BUNDLE_NAME="$1"; shift ;;
         -h|--help)
             echo "Usage: ./setup.sh [OPTIONS]"
@@ -92,7 +97,12 @@ while [[ $# -gt 0 ]]; do
             echo "  (no flags)                Install all skills (requires GHE)"
             echo "  --minimal                 ADLC skills only (no GHE needed)"
             echo "  --bundle <name>           Install a bundle:"
-            echo "                              voice-agent, digital-channels, service-ai, full"
+            echo "                              voice-ecv2       — Path A: ECV2 voice widget (no phone)"
+            echo "                              voice-agent      — Path B: PSTN phone call"
+            echo "                              voice-all        — Path C: Both paths"
+            echo "                              digital-channels — All messaging channels"
+            echo "                              service-ai       — All Service AI features"
+            echo "                              full             — Everything"
             echo "  --install <skill-name>    Install one skill (repeatable)"
             echo "  --list                    List all available skills"
             echo "  --uninstall               Remove all skills installed by this script"
@@ -123,7 +133,9 @@ if [[ "$MODE" == "list" ]]; then
     done
     echo ""
     echo "${BOLD}Bundles:${NC}"
-    echo "  ${BLUE}voice-agent${NC}        — Agent creation + voice channel + omni routing + transcription"
+    echo "  ${BLUE}voice-ecv2${NC}         — Path A: ECV2 voice widget (no phone number needed)"
+    echo "  ${BLUE}voice-agent${NC}        — Path B: PSTN phone call"
+    echo "  ${BLUE}voice-all${NC}          — Path C: Both paths (recommended)"
     echo "  ${BLUE}digital-channels${NC}   — All messaging channels + agent wiring"
     echo "  ${BLUE}service-ai${NC}         — All Service AI features"
     echo "  ${BLUE}full${NC}               — Everything"
@@ -158,12 +170,14 @@ fi
 # ---------- resolve bundle to install targets ----------
 if [[ "$MODE" == "bundle" ]]; then
     case "$BUNDLE_NAME" in
+        voice-ecv2)        INSTALL_TARGETS=($BUNDLE_VOICE_ECV2) ;;
         voice-agent)       INSTALL_TARGETS=($BUNDLE_VOICE_AGENT) ;;
+        voice-all)         INSTALL_TARGETS=($BUNDLE_VOICE_ALL) ;;
         digital-channels)  INSTALL_TARGETS=($BUNDLE_DIGITAL) ;;
         service-ai)        INSTALL_TARGETS=($BUNDLE_SERVICE_AI) ;;
         full)              INSTALL_TARGETS=($BUNDLE_FULL); MODE="full" ;;
         *)  err "Unknown bundle: $BUNDLE_NAME"
-            err "Available: voice-agent, digital-channels, service-ai, full"
+            err "Available: voice-ecv2, voice-agent, voice-all, digital-channels, service-ai, full"
             exit 2 ;;
     esac
     MODE="selective"
@@ -314,8 +328,9 @@ echo ""
 echo "  2. Authenticate your Salesforce org:"
 echo "     ${BLUE}sf org login web --alias my-org --set-default${NC}"
 echo ""
-echo "  3. Open Claude Code and paste:"
-echo "     ${BLUE}Read https://raw.githubusercontent.com/skyrmionz/agentforce-voice-quickstart/main/PROMPT.md and follow it.${NC}"
+echo "  3. Open Claude Code and run:"
+echo "     ${BLUE}curl -sL https://raw.githubusercontent.com/skyrmionz/agentforce-voice-quickstart/main/PROMPT.md${NC}"
+echo "     Then tell Claude: \"Follow this prompt step by step.\""
 echo ""
 echo "  See SKILLS.md for the full skill catalog and bundle options."
 echo ""

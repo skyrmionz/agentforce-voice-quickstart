@@ -6,55 +6,57 @@ Browse and install individual skills. Use `./setup.sh --install <skill-name>` or
 
 ## Voice & Channel Setup
 
-| Skill | Description | Headless % |
-|---|---|---|
-| `agent-on-native-voice` | Wire an Agentforce agent to a PSTN voice channel with escalation | ~100% |
-| `voice-channel-omni-queue` | Create a voice channel routed directly to a queue (no agent) | ~88% |
-| `afv-pstn-forward` | AFV setup with PSTN call forwarding (SCV/external CCaaS) | varies |
-| `transcription-recording` | Enable voice transcription and call recording | varies |
-| `voice-reports` | OOB Voice Reports — Rep/IVR Metrics + Command Center Reports tab | ~80% |
+| Skill | Description | Path | Headless % |
+|---|---|---|---|
+| `agent-on-native-voice` | Wire an Agentforce agent to a PSTN voice channel with escalation | B | ~100% |
+| `afv-pstn-forward` | Full end-to-end AFV PSTN setup (agent + flows + channel wiring) | B | ~100% |
+| `voice-channel-omni-queue` | Create a voice channel routed directly to a queue (no agent) | B | ~88% |
+| `agent-on-enhanced-chat-v2` | Wire agent to Enhanced Chat v2 via `sessionHandlerAsa` + deploy widget | A | ~88% |
+| `transcription-recording` | Enable voice transcription and call recording | B | varies |
+| `voice-reports` | OOB Voice Reports — Rep/IVR Metrics + Command Center Reports tab | B | ~80% |
+
+> **Note on ECV2 Voice:** The `agent-on-enhanced-chat-v2` skill handles channel wiring and widget deployment (~88% headless). Enabling voice mode on the channel requires Agentforce Builder UI — Claude will guide you through the clicks. The `isVoiceModeEnabled` metadata field cannot be deployed via API.
 
 ## Agent Creation & Wiring
 
-| Skill | Description | Headless % |
-|---|---|---|
-| `agentforce-agent-creation` | Create + configure an Agentforce Service Agent via `sf` CLI | 100% |
-| `agent-on-enhanced-chat` | Connect agent to Enhanced Chat v1 (MIAW) | ~88% |
-| `agent-on-enhanced-chat-v2` | Connect agent to Enhanced Chat v2 | ~88% |
-| `agent-on-3p-channels` | Bulk-wire agent to SMS/WhatsApp/LINE/Apple/FB channels | ~85% |
+| Skill | Description | Path | Headless % |
+|---|---|---|---|
+| `agentforce-agent-creation` | Create + configure an Agentforce Service Agent via `sf` CLI | All | 100% |
+| `agent-on-enhanced-chat` | Connect agent to Enhanced Chat v1 (MIAW) | — | ~88% |
+| `agent-on-3p-channels` | Bulk-wire agent to SMS/WhatsApp/LINE/Apple/FB channels | — | ~85% |
 
 ## Digital Channels
 
-| Skill | Description | Headless % |
-|---|---|---|
-| `enhanced-chat` | Migrate from Live Agent to Enhanced Digital Engagement (Chat v1) | ~43% |
-| `enhanced-chat-v2` | Set up Enhanced Chat v2 (persistent chat, rich media) | ~50% |
-| `sms-channel` | Configure SMS messaging channel | ~40% |
-| `whatsapp-channel` | Configure WhatsApp Business messaging channel | ~50% |
-| `line-channel` | Configure LINE messaging channel | ~67% |
-| `apple-messages-channel` | Configure Apple Messages for Business channel | ~40% |
-| `facebook-messenger-channel` | Configure Facebook Messenger (Enhanced) channel | ~60% |
+| Skill | Description | Path | Headless % |
+|---|---|---|---|
+| `enhanced-chat` | Migrate from Live Agent to Enhanced Digital Engagement (Chat v1) | — | ~43% |
+| `enhanced-chat-v2` | Set up Enhanced Chat v2 (persistent chat, rich media) | A | ~50% |
+| `sms-channel` | Configure SMS messaging channel | — | ~40% |
+| `whatsapp-channel` | Configure WhatsApp Business messaging channel | — | ~50% |
+| `line-channel` | Configure LINE messaging channel | — | ~67% |
+| `apple-messages-channel` | Configure Apple Messages for Business channel | — | ~40% |
+| `facebook-messenger-channel` | Configure Facebook Messenger (Enhanced) channel | — | ~60% |
 
 ## Omni-Channel & Routing
 
-| Skill | Description | Headless % |
-|---|---|---|
-| `omni-routing-supervisor` | Full Omni-Channel setup: routing, queues, presence, skills, supervisor | ~95% |
+| Skill | Description | Path | Headless % |
+|---|---|---|---|
+| `omni-routing-supervisor` | Full Omni-Channel setup: routing, queues, presence, skills, supervisor | All | ~95% |
 
 ## Service AI Features
 
-| Skill | Description | Headless % |
-|---|---|---|
-| `service-ai-grounding` | Einstein Generative AI data grounding | ~60% |
-| `agentforce-service-assistant` | Agentforce Service Assistant (agent-side copilot) | ~25% |
-| `einstein-article-recommendations` | Einstein Article Recommendations for cases | ~70% |
-| `einstein-service-replies` | Einstein Service Replies (messaging channels) | ~30% |
-| `einstein-conversation-insights` | Einstein Conversation Insights (transcription + sentiment) | ~65% |
-| `conversation-mining` | Conversation Mining (topic detection from transcripts) | ~55% |
-| `voice-messaging-nba` | Voice & Messaging Next Best Action recommendations | ~60% |
-| `knowledge-creation` | Einstein Knowledge Creation from cases | ~83% |
-| `real-time-translations` | Real-Time Translations for messaging | 100% |
-| `work-summaries` | Work Summaries & Conversation Catch-Up | ~83% |
+| Skill | Description | Path | Headless % |
+|---|---|---|---|
+| `service-ai-grounding` | Einstein Generative AI data grounding | — | ~60% |
+| `agentforce-service-assistant` | Agentforce Service Assistant (agent-side copilot) | — | ~25% |
+| `einstein-article-recommendations` | Einstein Article Recommendations for cases | — | ~70% |
+| `einstein-service-replies` | Einstein Service Replies (messaging channels) | — | ~30% |
+| `einstein-conversation-insights` | Einstein Conversation Insights (transcription + sentiment) | — | ~65% |
+| `conversation-mining` | Conversation Mining (topic detection from transcripts) | — | ~55% |
+| `voice-messaging-nba` | Voice & Messaging Next Best Action recommendations | — | ~60% |
+| `knowledge-creation` | Einstein Knowledge Creation from cases | — | ~83% |
+| `real-time-translations` | Real-Time Translations for messaging | — | 100% |
+| `work-summaries` | Work Summaries & Conversation Catch-Up | — | ~83% |
 
 ## Orchestrators (install multiple skills at once)
 
@@ -67,11 +69,23 @@ Browse and install individual skills. Use `./setup.sh --install <skill-name>` or
 
 ## Bundles (common combinations)
 
-### `voice-agent` — Everything needed to build a callable voice agent
+### `voice-ecv2` — Voice via Enhanced Chat V2 web widget (Path A)
+```bash
+./setup.sh --bundle voice-ecv2
+```
+Installs: `agentforce-agent-creation`, `agent-on-enhanced-chat-v2`, `omni-routing-supervisor`, `enhanced-chat-v2`
+
+### `voice-agent` — Voice via PSTN phone call (Path B)
 ```bash
 ./setup.sh --bundle voice-agent
 ```
-Installs: `agentforce-agent-creation`, `agent-on-native-voice`, `omni-routing-supervisor`, `voice-channel-omni-queue`, `transcription-recording`
+Installs: `agentforce-agent-creation`, `agent-on-native-voice`, `afv-pstn-forward`, `omni-routing-supervisor`, `voice-channel-omni-queue`, `transcription-recording`
+
+### `voice-all` — Both paths (Path C)
+```bash
+./setup.sh --bundle voice-all
+```
+Installs: everything from `voice-ecv2` + `voice-agent` (deduplicated)
 
 ### `digital-channels` — All digital messaging channels
 ```bash
@@ -145,6 +159,8 @@ See the source paths table below for every skill:
 | `agent-on-enhanced-chat-v2` | `Agent on Channel Configuration/Agent on EC V2/SKILL.md` |
 | `agent-on-3p-channels` | `Agent on Channel Configuration/Agent on Native 3P Channels/SKILL.md` |
 | `omni-routing-supervisor` | `Omni Configuration/Omni Routing Rep Supervisor Setup/SKILL.md` |
+| `afv-pstn-forward` | `AFV Setup with PSTN forward/SKILL.md` |
+| `transcription-recording` | `Enable transcription and recording/SKILL.md` |
 | `service-ai-grounding` | `Service AI Feature Configuration/service-ai-grounding/SKILL.md` |
 | `agentforce-service-assistant` | `Service AI Feature Configuration/agentforce-service-assistant/SKILL.md` |
 | `einstein-article-recommendations` | `Service AI Feature Configuration/einstein-article-recommendations/SKILL.md` |
@@ -155,5 +171,3 @@ See the source paths table below for every skill:
 | `knowledge-creation` | `Service AI Feature Configuration/KnowledgeCreation/SKILL.md` |
 | `real-time-translations` | `Service AI Feature Configuration/RealTimeTranslations/skill/SKILL.md` |
 | `work-summaries` | `Service AI Feature Configuration/WorkSummary/SKILL.md` |
-| `afv-pstn-forward` | `AFV Setup with PSTN forward/SKILL.md` |
-| `transcription-recording` | `Enable transcription and recording/SKILL.md` |
