@@ -28,12 +28,26 @@ STEP 1 — ENVIRONMENT CHECK
 Verify my setup before we do anything:
 
 1. SF CLI installed:
-   Run `sf --version`. If missing, install with `brew install sf`.
+   Run `sf --version`. If missing, install with `brew install sf`. If found, update: `sf update`.
 
-2. SF CLI authenticated to my org:
+2. Salesforce org authenticated:
    Run `sf org display --json`.
-   - If not authenticated, ask me for my org's instance URL and help me log in via `sf org login web` or access token.
-   - Confirm the org has required licenses:
+   - If authenticated: confirm the org alias, username, and instance URL. Ask me to confirm this is the org I want to use.
+   - If NOT authenticated: ask me which option I want:
+
+     **Option A — Use my own org (already authenticated or I'll log in now)**
+     Help me log in via `sf org login web --set-default` (opens browser) or `sf org login access-token` if I have a token.
+
+     **Option B — Use Agentforce Labs (provisioned test org)**
+     I'll provide an access token and instance URL from Agentforce Labs.
+     Tell me: "Go to Agentforce Labs → click the Org dropdown (top nav, left of your name) → Org Details → scroll to 'SF CLI Authentication' for your Instance URL and Access Token."
+     Then authenticate with:
+     ```
+     SF_ACCESS_TOKEN='<my-token>' sf org login access-token --instance-url <my-instance-url> --set-default --no-prompt
+     ```
+     (Note: Agentforce Labs tokens expire in ~2 hours. Re-authenticate if you get session expired errors.)
+
+   - Once authenticated, confirm the org has required licenses:
      `sf data query --query "SELECT MasterLabel, TotalLicenses, UsedLicenses FROM UserLicense WHERE MasterLabel IN ('Salesforce','Service Cloud','Einstein Agent','Agentforce Guest User')" --json`
 
 3. Agentforce ADLC skills installed:
@@ -66,7 +80,7 @@ Verify my setup before we do anything:
    ```
    (Note: requires Salesforce VPN + GHE access. If unavailable, proceed with ADLC skills only.)
 
-Report what's ready and what's missing. Fix what you can automatically. For anything that needs my input (org credentials), ask me.
+Report what's ready and what's missing. Fix what you can automatically. For anything that needs my input (org choice, credentials), ask me.
 
 ---
 
@@ -278,4 +292,5 @@ RULES:
 - `sf agent deactivate/activate` requires working dir to be an SFDX project directory.
 - Block on manual-step confirmation — don't queue more work until I confirm the UI step is done.
 - If a sub-agent dispatch fails with HTTP 500 twice, fall back to inline execution.
+- If `sf` commands fail with "Session expired" or "INVALID_SESSION_ID", tell the user to grab a fresh token from Agentforce Labs (Org dropdown → Org Details → SF CLI Authentication) or re-run `sf org login web`.
 ```

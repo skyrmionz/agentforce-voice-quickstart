@@ -37,11 +37,33 @@ This repo gives Claude Code the skills and context to stand up a working voice a
 |---|---|---|
 | Claude Code | `brew install claude` or [claude.ai/code](https://claude.ai/code) | All paths |
 | Salesforce CLI (`sf`) | `brew install sf` | All paths |
-| A Salesforce org with Agentforce licenses | CDO, SDO, or a provisioned OrgFarm/trial org | All paths |
+| A Salesforce org (pick one below) | See "Org Options" | All paths |
 | Digital Engagement license | Included in Enterprise+ with Foundations/Agentforce 1 Edition | Path A, C |
 | A website domain | Your Experience Cloud site or any domain you control | Path A, C |
 | A provisioned PSTN phone number (status: Live) | Setup → Service → Voice → Agentforce Voice Setup | Path B, C |
 | GHE access (for full skill suite) | VPN + `git.soma.salesforce.com` credentials | Optional |
+
+### Org Options
+
+**Option 1 — Use your own org**
+
+Any Salesforce org with Agentforce licenses (CDO, SDO, OrgFarm, or trial). Authenticate via:
+```bash
+sf org login web --set-default
+```
+
+**Option 2 — Use Agentforce Labs (fastest for new users)**
+
+[Agentforce Labs](https://agentforcelabs.salesforce.com) provisions a ready-to-go test org with all required licenses. To authenticate:
+
+1. Go to Agentforce Labs → click the **Org dropdown** (top nav bar, left of your name) → **Org Details**
+2. Scroll to **SF CLI Authentication** — copy your Instance URL and Access Token
+3. Run:
+```bash
+SF_ACCESS_TOKEN='<your-token>' sf org login access-token --instance-url <your-instance-url> --set-default --no-prompt
+```
+
+> **Note:** Agentforce Labs tokens expire in ~2 hours. If you get session expired errors, grab a fresh token from Org Details.
 
 ---
 
@@ -69,6 +91,12 @@ Open [PROMPT.md](./PROMPT.md), copy the prompt block, and paste it into Claude C
 # Clone and run setup
 git clone https://github.com/skyrmionz/agentforce-voice-quickstart.git
 cd agentforce-voice-quickstart
+
+# Authenticate your org (pick one):
+sf org login web --set-default                          # Own org (opens browser)
+# OR for Agentforce Labs:
+SF_ACCESS_TOKEN='<token>' sf org login access-token \
+  --instance-url <instance-url> --set-default --no-prompt
 
 # Install skills for your chosen path:
 ./setup.sh --bundle voice-ecv2          # Path A: ECV2 voice widget
