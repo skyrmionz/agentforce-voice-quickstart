@@ -1,24 +1,3 @@
-# Voice Agent Build Prompt
-
-Paste this into Claude Code. Claude will check your environment, install skills if needed, ask discovery questions, and build the agent end-to-end.
-
----
-
-## How to use
-
-Open Claude Code and run:
-
-```
-curl -sL https://raw.githubusercontent.com/skyrmionz/agentforce-voice-quickstart/main/PROMPT.md
-```
-
-Then tell Claude: "Follow this prompt step by step."
-
----
-
-## The Prompt
-
-```
 I want to build an Agentforce Voice Agent. Walk me through it end-to-end.
 
 ---
@@ -63,6 +42,7 @@ Verify my setup before we do anything:
    ls ~/.claude/skills/agentforce-agent-creation/SKILL.md 2>/dev/null
    ls ~/.claude/skills/omni-routing-supervisor/SKILL.md 2>/dev/null
    ls ~/.claude/skills/afv-pstn-forward/SKILL.md 2>/dev/null
+   ls ~/.claude/skills/amazon-connect-setup/SKILL.md 2>/dev/null
    ```
    If missing, install from the repo:
    ```
@@ -260,6 +240,8 @@ With my answers, execute the full build using the installed skills.
 
 --- PATH B2: Amazon Connect (Advanced — warm transfer to live agents) ---
 
+Use the `amazon-connect-setup` skill for full guidance. If boto3 + AWS credentials are available, phone provisioning and contact flow creation are programmatic. Otherwise, guide user through manual steps.
+
 Phase 1 — Set up Amazon Connect (if not already configured):
 
 1. **[MANUAL — Guide me] Enable Identity Provider:**
@@ -446,4 +428,3 @@ RULES:
 - Amazon Connect contact center provisioning requires waiting for 2 confirmation emails (AWS + Salesforce) — there is no polling endpoint.
 - If a sub-agent dispatch fails with HTTP 500 twice, fall back to inline execution.
 - If `sf` commands fail with "Session expired" or "INVALID_SESSION_ID", tell the user to grab a fresh token from Agentforce Labs (Org dropdown → Org Details → SF CLI Authentication) or re-run `sf org login web`.
-```

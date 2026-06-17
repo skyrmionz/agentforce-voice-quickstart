@@ -10,6 +10,7 @@ Browse and install individual skills. Use `./setup.sh --install <skill-name>` or
 |---|---|---|---|
 | `agent-on-native-voice` | Wire an Agentforce agent to a PSTN voice channel with escalation | B1, B2 | ~100% |
 | `afv-pstn-forward` | Full end-to-end AFV PSTN setup (agent + flows + channel wiring) | B1, B2 | ~100% |
+| `amazon-connect-setup` | Amazon Connect telephony provider + contact flow + phone provisioning | B2 | ~50% |
 | `voice-channel-omni-queue` | Create a voice channel routed directly to a queue (no agent) | B1, B2 | ~88% |
 | `agent-on-enhanced-chat-v2` | Wire agent to Enhanced Chat v2 via `sessionHandlerAsa` + deploy widget | A | ~88% |
 | `transcription-recording` | Enable voice transcription and call recording | B1, B2 | varies |
@@ -17,7 +18,7 @@ Browse and install individual skills. Use `./setup.sh --install <skill-name>` or
 
 > **Note on ECV2 Voice:** The `agent-on-enhanced-chat-v2` skill handles channel wiring and widget deployment (~88% headless). Enabling voice mode on the channel requires Agentforce Builder UI — Claude will guide you through the clicks. The `isVoiceModeEnabled` metadata field cannot be deployed via API.
 
-> **Note on Amazon Connect (Path B2):** The `afv-pstn-forward` skill handles the Salesforce-side setup (agent, flows, channel wiring). Amazon Connect setup (contact center creation, phone number claiming, contact flow configuration) is guided manually by Claude — there is no dedicated skill for the AWS side. Amazon Connect is the advanced phone path for production use cases requiring warm transfer to live agents.
+> **Note on Amazon Connect (Path B2):** The `amazon-connect-setup` skill covers the full Amazon Connect configuration — contact center creation, phone number provisioning (via boto3 or manual), contact flow JSON, and wiring. The `afv-pstn-forward` skill handles the Salesforce-side routing (agent, flows, channel). Together they cover the complete warm-transfer path. ~50% is programmatic via AWS SDK (boto3); the rest requires Setup UI (identity provider, voice enable, contact center wizard, AFV number provisioning).
 
 ## Agent Creation & Wiring
 

@@ -55,6 +55,7 @@ SKILL_REGISTRY=(
     "real-time-translations|Service AI Feature Configuration/RealTimeTranslations/skill/SKILL.md|Real-Time Translations|no"
     "work-summaries|Service AI Feature Configuration/WorkSummary/SKILL.md|Work Summaries & Conversation Catch-Up|no"
     "afv-pstn-forward|AFV Setup with PSTN forward/SKILL.md|AFV with PSTN call forwarding|artifacts"
+    "amazon-connect-setup|LOCAL:skills/amazon-connect-setup/SKILL.md|Amazon Connect setup for AFV (Path B2)|no"
     "transcription-recording|Enable transcription and recording/SKILL.md|Voice transcription + recording|no"
 )
 
@@ -63,8 +64,8 @@ SKILL_REGISTRY=(
 BUNDLE_VOICE_ECV2="agentforce-agent-creation agent-on-enhanced-chat-v2 omni-routing-supervisor enhanced-chat-v2"
 # Path B: PSTN Phone Call
 BUNDLE_VOICE_AGENT="agentforce-agent-creation agent-on-native-voice afv-pstn-forward omni-routing-supervisor voice-channel-omni-queue transcription-recording"
-# Path C: Both
-BUNDLE_VOICE_ALL="agentforce-agent-creation agent-on-native-voice afv-pstn-forward agent-on-enhanced-chat-v2 omni-routing-supervisor voice-channel-omni-queue transcription-recording enhanced-chat-v2"
+# Path C: Both (includes Amazon Connect skill for B2 option)
+BUNDLE_VOICE_ALL="agentforce-agent-creation agent-on-native-voice afv-pstn-forward amazon-connect-setup agent-on-enhanced-chat-v2 omni-routing-supervisor voice-channel-omni-queue transcription-recording enhanced-chat-v2"
 BUNDLE_DIGITAL="enhanced-chat enhanced-chat-v2 sms-channel whatsapp-channel line-channel apple-messages-channel facebook-messenger-channel agent-on-3p-channels agent-on-enhanced-chat agent-on-enhanced-chat-v2"
 BUNDLE_SERVICE_AI="service-ai-grounding agentforce-service-assistant einstein-article-recommendations einstein-service-replies einstein-conversation-insights conversation-mining voice-messaging-nba knowledge-creation real-time-translations work-summaries"
 BUNDLE_FULL="$BUNDLE_VOICE_ALL $BUNDLE_DIGITAL $BUNDLE_SERVICE_AI voice-reports"
@@ -192,7 +193,17 @@ install_skill() {
         IFS='|' read -r reg_name reg_path _ reg_artifacts <<< "$entry"
         if [[ "$reg_name" == "$name" ]]; then
             mkdir -p "$SKILLS_DIR/$name"
-            if cp "$hs_dir/$reg_path" "$SKILLS_DIR/$name/SKILL.md" 2>/dev/null; then
+            # Handle LOCAL: prefix (skills bundled in this repo)
+            if [[ "$reg_path" == LOCAL:* ]]; then
+                local local_path="${reg_path#LOCAL:}"
+                local script_dir
+                script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+                if cp "$script_dir/$local_path" "$SKILLS_DIR/$name/SKILL.md" 2>/dev/null; then
+                    ok "$name (bundled)"
+                else
+                    err "Failed to install $name (not found at $script_dir/$local_path)"
+                fi
+            elif cp "$hs_dir/$reg_path" "$SKILLS_DIR/$name/SKILL.md" 2>/dev/null; then
                 # Copy artifacts if the skill has them
                 if [[ "$reg_artifacts" == "artifacts" ]]; then
                     local src_dir
