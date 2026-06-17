@@ -8,14 +8,16 @@ Browse and install individual skills. Use `./setup.sh --install <skill-name>` or
 
 | Skill | Description | Path | Headless % |
 |---|---|---|---|
-| `agent-on-native-voice` | Wire an Agentforce agent to a PSTN voice channel with escalation | B | ~100% |
-| `afv-pstn-forward` | Full end-to-end AFV PSTN setup (agent + flows + channel wiring) | B | ~100% |
-| `voice-channel-omni-queue` | Create a voice channel routed directly to a queue (no agent) | B | ~88% |
+| `agent-on-native-voice` | Wire an Agentforce agent to a PSTN voice channel with escalation | B1, B2 | ~100% |
+| `afv-pstn-forward` | Full end-to-end AFV PSTN setup (agent + flows + channel wiring) | B1, B2 | ~100% |
+| `voice-channel-omni-queue` | Create a voice channel routed directly to a queue (no agent) | B1, B2 | ~88% |
 | `agent-on-enhanced-chat-v2` | Wire agent to Enhanced Chat v2 via `sessionHandlerAsa` + deploy widget | A | ~88% |
-| `transcription-recording` | Enable voice transcription and call recording | B | varies |
-| `voice-reports` | OOB Voice Reports — Rep/IVR Metrics + Command Center Reports tab | B | ~80% |
+| `transcription-recording` | Enable voice transcription and call recording | B1, B2 | varies |
+| `voice-reports` | OOB Voice Reports — Rep/IVR Metrics + Command Center Reports tab | B1, B2 | ~80% |
 
 > **Note on ECV2 Voice:** The `agent-on-enhanced-chat-v2` skill handles channel wiring and widget deployment (~88% headless). Enabling voice mode on the channel requires Agentforce Builder UI — Claude will guide you through the clicks. The `isVoiceModeEnabled` metadata field cannot be deployed via API.
+
+> **Note on Amazon Connect (Path B1):** The `afv-pstn-forward` skill handles the Salesforce-side setup (agent, flows, channel wiring). Amazon Connect setup (contact center creation, phone number claiming, contact flow configuration) is guided manually by Claude — there is no dedicated skill for the AWS side. Amazon Connect is the preferred phone path because it supports warm transfer to live agents.
 
 ## Agent Creation & Wiring
 

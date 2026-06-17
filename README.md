@@ -11,14 +11,17 @@ This repo gives Claude Code the skills and context to stand up a working voice a
 | Path | Channel | What you need | Time to first voice interaction |
 |---|---|---|---|
 | **A) ECV2 Voice Widget** | Web chat with voice mode | A website domain (sandbox site works) | ~15 min |
-| **B) PSTN Phone Call** | Real phone number | A provisioned phone number (status: Live) | ~12 min + provisioning wait |
-| **C) Both** | Widget + phone | Both of the above | ~20 min |
+| **B1) Amazon Connect** | Real phone number + warm transfer | Amazon Connect contact center | ~30 min + AWS provisioning wait |
+| **B2) Native PSTN** | Real phone number (simpler) | A provisioned phone number (status: Live) | ~12 min + provisioning wait |
+| **C) Both** | Widget + phone | Path A + B1 or B2 | ~35 min |
 
 **Path A** is the fastest — no phone number needed. Customers talk to your agent through a web chat widget that supports voice mode. Claude automates ~88% of the setup; you do 2-3 clicks in Agentforce Builder to enable voice.
 
-**Path B** is the most realistic end-user experience — customers call a real phone number. Claude automates ~100% of the setup (after phone provisioning). Phone provisioning: Setup → Service → Voice → Agentforce Voice Setup.
+**Path B1 (Amazon Connect)** is the preferred phone path — the only option that supports warm transfer to live agents. Customer dials an Amazon Connect DID → Connect forwards to Agentforce Voice → AI agent handles → on escalation, call returns to Connect → routes to human rep with full context.
 
-**Path C** is recommended — start with A for immediate testing, add B when your number is ready.
+**Path B2 (Native PSTN)** is simpler — just an Agentforce Voice phone number, no Amazon Connect needed. But escalation disconnects the call (no warm transfer). Good for quick voice testing.
+
+**Path C** is recommended — start with A for immediate testing, add B1/B2 when your phone setup is ready.
 
 ---
 
@@ -40,7 +43,8 @@ This repo gives Claude Code the skills and context to stand up a working voice a
 | A Salesforce org (pick one below) | See "Org Options" | All paths |
 | Digital Engagement license | Included in Enterprise+ with Foundations/Agentforce 1 Edition | Path A, C |
 | A website domain | Your Experience Cloud site or any domain you control | Path A, C |
-| A provisioned PSTN phone number (status: Live) | Setup → Service → Voice → Agentforce Voice Setup | Path B, C |
+| Amazon Connect contact center | Setup → Voice → Amazon Setup (Claude guides full setup) | Path B1, C |
+| A provisioned PSTN phone number (status: Live) | Setup → Service → Voice → Agentforce Voice Setup | Path B2, C |
 | GHE access (for full skill suite) | VPN + `git.soma.salesforce.com` credentials | Optional |
 
 ### Org Options
@@ -54,7 +58,7 @@ sf org login web --set-default
 
 **Option 2 — Use Agentforce Labs (fastest for new users)**
 
-[Agentforce Labs](https://agentforcelabs.salesforce.com) provisions a ready-to-go test org with all required licenses. To authenticate:
+[Agentforce Labs](http://labs.agentforce.com/) provisions a ready-to-go test org with all required licenses. To authenticate:
 
 1. Go to Agentforce Labs → click the **Org dropdown** (top nav bar, left of your name) → **Org Details**
 2. Scroll to **SF CLI Authentication** — copy your Instance URL and Access Token
@@ -100,7 +104,7 @@ SF_ACCESS_TOKEN='<token>' sf org login access-token \
 
 # Install skills for your chosen path:
 ./setup.sh --bundle voice-ecv2          # Path A: ECV2 voice widget
-./setup.sh --bundle voice-agent         # Path B: PSTN phone call
+./setup.sh --bundle voice-agent         # Path B1/B2: PSTN phone call (Amazon Connect or native)
 ./setup.sh --bundle voice-all           # Path C: Both paths
 
 # Or install everything:
@@ -161,11 +165,19 @@ The setup installs Claude Code skills that teach it how to configure Agentforce 
 4. Talk to your agent — test topic routing and escalation
 5. Check Omni-Channel in your org to see escalated conversations arrive
 
-### Path B (PSTN Phone Call)
+### Path B1 (Amazon Connect)
 
-1. Call the provisioned phone number from your phone
+1. Call the **Amazon Connect DID number** (NOT the Agentforce Voice number)
+2. Amazon Connect receives the call and forwards to Agentforce Voice
+3. Talk to your agent — test topic routing
+4. Say "transfer me to a real person" — call returns to Connect → routes to human via Omni-Channel
+5. Open Service Console → set status to Available → receive the escalated call with full context
+
+### Path B2 (Native PSTN)
+
+1. Call the Agentforce Voice provisioned phone number directly
 2. Talk to your agent — test the happy path and escalation
-3. Say "transfer me to a real person" to test escalation
+3. Say "transfer me to a real person" (disconnects and routes to queue — no warm transfer)
 4. Check Omni-Channel in your org to see escalated calls arrive
 
 ### Both paths
@@ -182,7 +194,12 @@ Some steps can't be automated via API. Claude will pause and tell you exactly wh
 |---|---|---|
 | Enable voice mode | A, C | Agentforce Builder → Agent → Channels → ECV2 → Voice Settings → Enable |
 | Publish ECV2 deployment | A, C | Setup → Embedded Service Deployments → Select → Publish |
-| Provision phone number | B, C | Setup → Service → Voice → Agentforce Voice Setup → Claim number |
+| Enable Salesforce Voice + Amazon Connect | B1, C | Setup → Voice → Amazon Setup → Turn on Voice → wait for 2 emails |
+| Create Amazon Connect contact center | B1, C | Setup → Voice → Amazon Contact Centers → New → configure region |
+| Claim phone number in Amazon Connect | B1, C | Connect console → Channels → Phone Numbers → Claim a number |
+| Create Amazon Connect contact flow | B1, C | Connect console → Contact Flows → create AFV inbound flow |
+| Add telephony connection to agent | B1, C | Agentforce Builder → Agent → Connections → + Telephony → Voice Settings |
+| Provision Agentforce Voice number | B1, B2, C | Setup → Agentforce Voice Setup → New Number |
 | Omni-Channel login behavior | All | Setup → Omni-Channel Settings → select login behavior radio |
 
 ---
@@ -194,12 +211,18 @@ Some steps can't be automated via API. Claude will pause and tell you exactly wh
 | "Permission denied" on GHE clone | All | Connect to VPN, run `gh auth login --hostname git.soma.salesforce.com` |
 | Agent doesn't respond to chat | A | Check `MessagingChannel.sessionHandlerAsa` is set to agent API name |
 | No voice button in chat widget | A | Verify voice mode enabled in Agentforce Builder → Voice Settings |
-| Agent doesn't pick up phone calls | B | Check `MessagingChannel.SessionHandlerId` is a FlowDefinition ID (300...) |
+| Agent doesn't pick up phone calls | B1, B2 | Check `MessagingChannel.SessionHandlerId` is a FlowDefinition ID (300...) |
+| Calls not reaching Salesforce | B1 | Amazon Connect contact flow not forwarding to Agentforce Voice number — check flow is published and DID is assigned to it |
+| Escalation doesn't transfer to human | B1 | Verify Amazon Connect flow has "Transfer to queue" after AFV transfer block |
+| Calling Agentforce Voice number directly | B1 | Always dial the Amazon Connect DID — that's the customer-facing number |
+| "Confirm Settings" button greyed out | B1 | Refresh the page and try again (common during initial setup) |
+| Contact center not appearing | B1 | AWS provisioning takes a few minutes — refresh and wait |
 | Escalation doesn't work | All | Verify `plannerType=Atlas__VoiceAgent` and surface has `outboundRouteConfigs` |
-| "Flow not found" on deploy | B | Deploy the escalation flow before the planner that references it |
-| Agent drops calls in <15 seconds | B | Planner has no topics — add at least one topic |
-| Queue not receiving escalations | B | Queue `RoutingModel` must be `ExternalRouting` (not `LeastActive`) |
+| "Flow not found" on deploy | B1, B2 | Deploy the escalation flow before the planner that references it |
+| Agent drops calls in <15 seconds | B1, B2 | Planner has no topics — add at least one topic |
+| Queue not receiving escalations | B1, B2 | Queue `RoutingModel` must be `ExternalRouting` (not `LeastActive`) |
 | `isVoiceModeEnabled` deploy fails | A | This field cannot be deployed via API — enable in Builder UI instead |
+| SSO failure / "Fail to connect to telephone provider" | B1 | Check third-party cookies and microphone permissions in browser |
 
 ---
 
