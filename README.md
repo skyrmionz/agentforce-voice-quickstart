@@ -75,19 +75,17 @@ SF_ACCESS_TOKEN='<your-token>' sf org login access-token --instance-url <your-in
 
 ### Option 1 — Hand this entire repo to Claude (easiest)
 
-Open Claude Code and run:
+Open Claude Code and paste:
 
 ```
-curl -sL https://raw.githubusercontent.com/skyrmionz/agentforce-voice-quickstart/main/PROMPT.md
+Follow this prompt step by step: $(curl -sL https://raw.githubusercontent.com/skyrmionz/agentforce-voice-quickstart/main/PROMPT.md)
 ```
 
-Then tell Claude: "Follow this prompt step by step."
-
-Claude will install skills, check your environment, let you choose your path, ask discovery questions, and build the agent.
+Claude will install skills, check your environment, let you choose your path, ask discovery questions, create a persistent build plan, and build the agent using the ADLC (Agent Script) workflow.
 
 ### Option 2 — Copy/paste the prompt yourself
 
-Open [PROMPT.md](./PROMPT.md), copy the prompt block, and paste it into Claude Code.
+Open [PROMPT.md](./PROMPT.md), copy the entire contents, and paste it into Claude Code.
 
 ### Option 3 — Run the setup script first, then build
 
@@ -114,11 +112,30 @@ SF_ACCESS_TOKEN='<token>' sf org login access-token \
 ./setup.sh --install agent-on-enhanced-chat-v2 --install omni-routing-supervisor
 ./setup.sh --list                       # See all available skills
 
-# Restart Claude Code, then in a new session:
-# Paste the prompt from PROMPT.md (setup.sh prints it at the end)
+# Then in Claude Code, paste the prompt from PROMPT.md
 ```
 
 See [SKILLS.md](./SKILLS.md) for the full catalog with descriptions and headless coverage %.
+
+---
+
+## How it works
+
+Claude uses the **Agent Development Life Cycle (ADLC)** — not the legacy builder:
+
+1. **Environment check** — verifies CLI, org auth, skills
+2. **Path choice** — you pick ECV2, PSTN, or both
+3. **Discovery** — Claude asks what to build
+4. **Build plan** — Claude creates `BUILD_PLAN.md` with org details, build config, and progress tracking. This file is Claude's "source of truth" — it re-reads it before every deploy to stay on target.
+5. **Build** — Claude reads skill files for exact commands and deploys using ADLC:
+   - Writes an `.agent` file (Agent Script)
+   - Deploys the AiAuthoringBundle (`sf project deploy start`)
+   - Publishes (`sf agent publish authoring-bundle`) — creates Bot + GenAiPlanner
+   - Patches the GenAiPlannerBundle for voice (`Atlas__VoiceAgent` + surfaces)
+   - Wires channels, routing, escalation
+6. **Verify & test** — SOQL probes + manual testing + automated evals
+
+Skills are the detailed guides (commands, error handling, pitfalls). The prompt is the framework that orchestrates them.
 
 ---
 

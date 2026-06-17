@@ -7,7 +7,7 @@ STEP 1 — ENVIRONMENT CHECK
 Verify my setup before we do anything:
 
 1. SF CLI installed:
-   Run `sf --version`. If missing, install with `brew install sf`. If found, update: `sf update`.
+   Run `sf --version`. If missing, install with `brew install sf`.
 
 2. Salesforce org authenticated:
    Run `sf org display --json`.
@@ -28,37 +28,25 @@ Verify my setup before we do anything:
 
    - Once authenticated, confirm the org has required licenses:
      `sf data query --query "SELECT MasterLabel, TotalLicenses, UsedLicenses FROM UserLicense WHERE MasterLabel IN ('Salesforce','Service Cloud','Einstein Agent','Agentforce Guest User')" --json`
+     (If this query fails on your org type, skip — license presence is validated during deploy.)
 
-3. Agentforce ADLC skills installed:
+3. ADLC skill installed:
    Run `ls ~/.claude/skills/developing-agentforce/SKILL.md 2>/dev/null`.
    If missing, install: `curl -sSL https://raw.githubusercontent.com/SalesforceAIResearch/agentforce-adlc/main/tools/install.sh | bash`
-   (Note: skill changes require restarting Claude Code to take effect.)
 
 4. AFCC voice skills installed:
    Check which skills are present:
    ```
-   ls ~/.claude/skills/agent-on-native-voice/SKILL.md 2>/dev/null
-   ls ~/.claude/skills/agent-on-enhanced-chat-v2/SKILL.md 2>/dev/null
-   ls ~/.claude/skills/agentforce-agent-creation/SKILL.md 2>/dev/null
-   ls ~/.claude/skills/omni-routing-supervisor/SKILL.md 2>/dev/null
-   ls ~/.claude/skills/afv-pstn-forward/SKILL.md 2>/dev/null
-   ls ~/.claude/skills/amazon-connect-setup/SKILL.md 2>/dev/null
+   for skill in agent-on-native-voice agent-on-enhanced-chat-v2 agentforce-agent-creation omni-routing-supervisor afv-pstn-forward amazon-connect-setup; do
+     [ -f ~/.claude/skills/$skill/SKILL.md ] && echo "✓ $skill" || echo "✗ $skill (missing)"
+   done
    ```
-   If missing, install from the repo:
+   If any are missing, install from the quickstart repo:
    ```
-   git clone https://git.soma.salesforce.com/gvasudev/agentforce_contact_center_pm.git /tmp/afcc-skills
-   BASE="/tmp/afcc-skills/workgroups/afcc_afv_headless_demo/Headless Skills"
-   mkdir -p ~/.claude/skills/agent-on-native-voice && cp "$BASE/Agent on Channel Configuration/Agent on Native Voice/skill/SKILL.md" ~/.claude/skills/agent-on-native-voice/SKILL.md
-   mkdir -p ~/.claude/skills/agent-on-enhanced-chat-v2 && cp "$BASE/Agent on Channel Configuration/Agent on EC V2/SKILL.md" ~/.claude/skills/agent-on-enhanced-chat-v2/SKILL.md
-   mkdir -p ~/.claude/skills/agentforce-agent-creation && cp "$BASE/Agent Configuration/Agentforce Agent Creation/Skill.md" ~/.claude/skills/agentforce-agent-creation/SKILL.md
-   mkdir -p ~/.claude/skills/omni-routing-supervisor && cp "$BASE/Omni Configuration/Omni Routing Rep Supervisor Setup/SKILL.md" ~/.claude/skills/omni-routing-supervisor/SKILL.md
-   cp -R "$BASE/Omni Configuration/Omni Routing Rep Supervisor Setup/artifacts" ~/.claude/skills/omni-routing-supervisor/
-   mkdir -p ~/.claude/skills/afv-pstn-forward && cp "$BASE/AFV Setup with PSTN forward/SKILL.md" ~/.claude/skills/afv-pstn-forward/SKILL.md
-   cp -R "$BASE/AFV Setup with PSTN forward/artifacts" ~/.claude/skills/afv-pstn-forward/
-   mkdir -p ~/.claude/skills/voice-channel-omni-queue && cp "$BASE/Channel Configuration/Voice channel with omni queue/skill/SKILL.md" ~/.claude/skills/voice-channel-omni-queue/SKILL.md
-   mkdir -p ~/.claude/skills/transcription-recording && cp "$BASE/Enable transcription and recording/SKILL.md" ~/.claude/skills/transcription-recording/SKILL.md
+   curl -sL https://raw.githubusercontent.com/skyrmionz/agentforce-voice-quickstart/main/setup.sh | bash -s -- --bundle voice-all
    ```
-   (Note: requires Salesforce VPN + GHE access. If unavailable, proceed with ADLC skills only.)
+   Or clone and run locally: `./setup.sh --bundle voice-all`
+   (Note: some skills require Salesforce VPN + GHE access. If unavailable, proceed with what's installed.)
 
 Report what's ready and what's missing. Fix what you can automatically. For anything that needs my input (org choice, credentials), ask me.
 
@@ -132,282 +120,217 @@ Path C: ask all of the above (7 from Path A + questions from Path B).
 
 ---
 
-STEP 4 — BUILD
+STEP 4 — CREATE BUILD PLAN
 
-With my answers, execute the full build using the installed skills.
+**MANDATORY.** Before building anything, create a plan file at `./BUILD_PLAN.md` in the current working directory. This is your guiding mandate for the entire build. You MUST refer to it before every deploy command to verify you're targeting the correct org.
 
-=== PATH A: ECV2 Voice ===
+Write it with this structure:
 
-1. **Create the agent** — Use the agentforce-agent-creation or afv-pstn-forward skill:
-   - Deploy EinsteinGptSettings (enable platform + all 4 fields)
-   - Assign permission sets (CopilotSalesforceUser, CopilotSalesforceAdmin, AgentforceServiceAgentBuilder)
-   - Create agent via Bot + BotVersion + GenAiPlannerBundle metadata deploy
-   - Set `plannerType=Atlas__VoiceAgent`
-   - Add `Messaging` plannerSurface with outboundRouteConfigs
-   - Add topics (at least 1 — agent drops conversations without topics)
-   - Add Escalation topic with `canEscalate=true`
-   - Activate the agent
+```markdown
+# Build Plan — [Agent Name]
 
-2. **Configure Omni-Channel** — Use the omni-routing-supervisor skill:
-   - Create routing config and queue (with MessagingSession SObject access)
-   - Add my user as queue member
+## Org Details
+- **Alias:** <org-alias>
+- **Username:** <username>
+- **Instance URL:** <instance-url>
+- **Org ID:** <org-id from sf org display>
+
+## Build Details
+- **Path:** <A / B1 / B2 / C>
+- **Agent Name:** <developer name>
+- **Agent Label:** <display name>
+- **Agent User:** <agent user email — query with: sf data query --query "SELECT Username FROM User WHERE Profile.Name='Agentforce Service Agent User' LIMIT 1">
+- **Queue:** <queue name for escalation>
+- **Escalation Flow:** <flow developer name>
+
+## Discovery Answers
+<paste all answers from Step 3>
+
+## Progress
+- [ ] Environment verified
+- [ ] Path chosen: <path>
+- [ ] Discovery complete
+- [ ] Plan created
+- [ ] Agent .agent file written
+- [ ] AiAuthoringBundle deployed
+- [ ] Agent published (sf agent publish authoring-bundle)
+- [ ] GenAiPlannerBundle patched (plannerType + surfaces)
+- [ ] Omni-Channel configured (queue + routing)
+- [ ] Escalation flow deployed
+- [ ] Channel wired (MessagingChannel or PstnVoice)
+- [ ] Agent activated
+- [ ] [Path A] EmbeddedServiceConfig deployed
+- [ ] [Path A] Voice mode enabled (manual)
+- [ ] [Path A] ECV2 deployment published (manual)
+- [ ] [Path B] Phone number provisioned (manual)
+- [ ] [Path B] Inbound routing flow deployed
+- [ ] [Path B] PstnVoice channel created (REST)
+- [ ] Verification queries passed
+- [ ] Testing complete
+
+## Decisions & Notes
+<track key decisions, workarounds, and anything learned during the build>
+```
+
+**RULES for the plan:**
+- Read the plan before EVERY deploy or org-modifying command to confirm org alias matches.
+- Update progress checkboxes as each step completes.
+- If context gets compacted or conversation gets long, re-read the plan to re-anchor.
+- Log any surprises, errors, or workarounds in the "Decisions & Notes" section.
+- If the user provides new information that changes the build, update the plan immediately.
+
+---
+
+STEP 5 — BUILD
+
+Execute the build using the installed skills as your guides. Skills contain the exact commands, error handling, and pitfalls. Read each skill file before starting that phase.
+
+**How to use a skill:** Read `~/.claude/skills/<skill-name>/SKILL.md` and follow its step-by-step instructions. Skills are instruction documents with commands, validation queries, and error handling — not executable scripts.
+
+=== COMMON (all paths) ===
+
+1. **Write the agent (.agent file)**
+   Read the `developing-agentforce` skill. Write an Agent Script file that defines the agent based on discovery answers.
+   - Use TAB indentation (required by Agent Script)
+   - Include: system instructions, model_config, config block, variables, connection messaging block, start_agent, and subagents
+   - The `connection messaging:` block defines escalation routing — use `flow://` prefix for the outbound route name
+   - The config `developer_name` becomes the agent's API name
+   - Set `default_agent_user` to the agent user email from the plan (NOT a placeholder)
+
+2. **Deploy the AiAuthoringBundle**
+   ```
+   sf project deploy start --source-dir <path-to-bundle-dir> --target-org <PLAN_ORG_ALIAS>
+   ```
+   Verify: deploy status = Succeeded, component type = AiAuthoringBundle.
+
+3. **Publish the agent**
+   ```
+   sf agent publish authoring-bundle --api-name <bundle_developer_name> --target-org <PLAN_ORG_ALIAS>
+   ```
+   This compiles the Agent Script, creates Bot + BotVersion + GenAiPlanner metadata, and retrieves it back locally.
+   **CRITICAL:** This command requires a full OAuth session (refresh token). If it fails with "Session expired or invalid" but other sf commands work, the user needs to re-auth with `sf org login web` (not just access-token).
+
+4. **Patch the GenAiPlannerBundle for voice**
+   After publish, retrieve the planner bundle that was created:
+   - Find it locally (publish retrieves it) — look in `force-app/main/default/genAiPlannerBundles/`
+   - The name may have a version suffix (e.g., `_v4`) — find the one matching your agent
+   - Change `<plannerType>` from `Atlas__ConcurrentMultiAgentOrchestration` to `Atlas__VoiceAgent`
+   - Add a Telephony plannerSurface (if Path B or C)
+   - Verify the Messaging plannerSurface has outboundRouteConfigs pointing to your escalation flow
+   - Deploy the patched planner:
+     ```
+     sf project deploy start --source-dir <planner-bundle-dir> --target-org <PLAN_ORG_ALIAS>
+     ```
+
+5. **Configure Omni-Channel** — Read the `omni-routing-supervisor` skill:
+   - Create routing config and queue
+   - Add user as queue member
    - Verify Omni-Channel settings are enabled
 
-3. **Deploy outbound escalation flow** — Use agent-on-enhanced-chat-v2 skill:
-   - Create Omni-Channel routing flow for agent → human escalation
-   - Deploy via Metadata API
+6. **Deploy escalation flow**
+   Read the relevant skill (`agent-on-enhanced-chat-v2` for Path A, `afv-pstn-forward` for Path B).
+   **MUST be deployed BEFORE the planner that references it.**
 
-4. **Create MessagingChannel** — Use agent-on-enhanced-chat-v2 skill:
-   - Type: `EmbeddedMessaging`
-   - Set `sessionHandlerAsa` = agent API name (THIS enables automatic routing to agent)
+7. **Activate the agent**
+   ```
+   sf agent activate --api-name <agent_developer_name> --target-org <PLAN_ORG_ALIAS>
+   ```
+
+=== PATH A SPECIFIC: ECV2 Voice ===
+
+8. **Create MessagingChannel (EmbeddedMessaging)** — Read `agent-on-enhanced-chat-v2` skill:
+   - Set `sessionHandlerAsa` = agent DeveloperName (from publish — this is the Bot DeveloperName)
    - Set `sessionHandlerType` = `AgentforceServiceAgent`
-   - Set `sessionHandlerQueue` = fallback queue developer name
+   - Set `sessionHandlerQueue` = queue developer name
    - Deploy via Metadata API
 
-5. **Create EmbeddedServiceConfig** — Use agent-on-enhanced-chat-v2 skill:
+9. **Create EmbeddedServiceConfig** — Read `agent-on-enhanced-chat-v2` skill:
    - Link to the MessagingChannel
-   - Set deployment type: Web
-   - Configure branding
    - Deploy via Metadata API
 
-6. **[MANUAL — Guide me] Enable Voice Mode in Agentforce Builder:**
-   Tell me exactly what to click:
-   - Navigate to Setup → Agentforce → Agents (or use `sf org open --path "/lightning/setup/AgentStudio/home"`)
-   - Open the agent I just created
-   - Click "Channels" or "Connections" tab
-   - Add "Enhanced Chat v2" connection → select the channel we just created
-   - Go to Voice Settings → enable voice mode
-   - Save
+10. **[MANUAL] Enable Voice Mode:**
+    Tell me: Navigate to Setup → Agents → open the agent → Channels → Enhanced Chat v2 → Voice Settings → Enable voice mode → Save.
+    (Alternative: Setup → Messaging for In-App and Web → find channel → Voice Settings toggle)
 
-7. **[MANUAL — Guide me] Publish the ECV2 Deployment:**
-   Tell me exactly what to click:
-   - Navigate to Setup → Embedded Service Deployments (or use `sf org open --path "/lightning/setup/EmbeddedServiceDeployments/home"`)
-   - Find the deployment we created
-   - Click it → Publish (or "Switch to v2" if prompted)
-   - Copy the deployment code snippet
+11. **[MANUAL] Publish the ECV2 Deployment:**
+    Tell me: Navigate to Setup → Embedded Service Deployments → find the deployment → Publish (or "Switch to v2" → "Switch & Publish").
 
-8. **Verify** — Run SOQL probes:
-   ```
-   sf data query --query "SELECT Id, DeveloperName, SessionHandlerType FROM MessagingChannel WHERE MessageType='EmbeddedMessaging' AND DeveloperName='<channel_dev_name>'"
-   sf data query --query "SELECT Id, DeveloperName, IsEnabled FROM EmbeddedServiceConfig WHERE DeveloperName='<config_dev_name>'" --use-tooling-api
-   ```
+=== PATH B1 SPECIFIC: Native PSTN ===
 
-=== PATH B: PSTN Voice ===
+8. **[MANUAL] Provision phone number:**
+    Tell me: Setup → Service → Voice → Agentforce Voice Setup → New Number → wait for status "Live".
 
---- PATH B1: Native PSTN (Recommended — simplest phone path) ---
-
-1. **[MANUAL — Guide me] Provision an Agentforce Voice phone number:**
-   - Setup → Service → Voice → Agentforce Voice Setup
-   - Click "New Number" → claim a number → wait for status "Live"
-
-2. **Create the agent** — Use the afv-pstn-forward skill:
-   - Deploy EinsteinGptSettings (enable platform + all 4 fields)
-   - Assign permission sets
-   - Create agent with `plannerType=Atlas__VoiceAgent`
-   - Add BOTH `Messaging` AND `Telephony` plannerSurfaces with escalation flow references
-   - Add topics + Escalation topic with `canEscalate=true`
-   - Activate
-
-3. **Create Routing Config + Queue** — Use afv-pstn-forward skill:
-   - RoutingModel = `ExternalRouting` (NOT LeastActive — that breaks PSTN routing)
-   - QueueSObject = VoiceCall
-   - Add my user as queue member
-
-4. **Deploy Escalation Flow** — Use afv-pstn-forward skill:
-   - routingType = `QueueBased`
-   - serviceChannelDevName = `sfdc_phone`
-   - MUST deploy BEFORE the planner that references it
-
-5. **Deploy Inbound Voice Routing Flow** — Use afv-pstn-forward skill:
+9. **Deploy inbound voice routing flow** — Read `afv-pstn-forward` skill:
    - routingType = `Copilot`
    - copilotId.setupReferenceType = `BotDefinition`
    - serviceChannelLabel = `Phone` (NOT `Voice Call`)
 
-6. **Create MessagingChannel (PstnVoice)** — Use afv-pstn-forward skill:
-   - MessageType = `PstnVoice` (NOT `Phone`)
-   - MessagingPlatformKey = phone number
-   - SessionHandlerId = FlowDefinition ID (300... prefix, NOT Flow version 301...)
-   - FallbackQueueId = queue from step 3
-   - IsActive = true
-   - Create via REST POST (not Metadata API deploy)
-
-7. **Verify** — Run SOQL probes:
-   ```
-   sf data query --query "SELECT Id, DeveloperName, SessionHandlerId, FallbackQueueId FROM MessagingChannel WHERE MessageType='PstnVoice'"
-   sf data query --query "SELECT Id, ActiveVersionId FROM FlowDefinition WHERE DeveloperName LIKE '%<agent_name>%'" --use-tooling-api
-   sf data query --query "SELECT Id, GroupId, UserOrGroupId FROM GroupMember WHERE UserOrGroupId='<my-user-id>'"
-   ```
-
---- PATH B2: Amazon Connect (Advanced — warm transfer to live agents) ---
-
-Use the `amazon-connect-setup` skill for full guidance. If boto3 + AWS credentials are available, phone provisioning and contact flow creation are programmatic. Otherwise, guide user through manual steps.
-
-Phase 1 — Set up Amazon Connect (if not already configured):
-
-1. **[MANUAL — Guide me] Enable Identity Provider:**
-   - Setup → search "Identity Providers" → click Enable
-
-2. **[MANUAL — Guide me] Turn on Salesforce Voice:**
-   - Setup → search "Voice" → Amazon Setup
-   - Toggle on "Enable Service Cloud Voice"
-   - Enter a unique AWS root email: `username+scv[YYYYMMDD]@domain.com`
-   - Click "Turn on Voice"
-   - WAIT for two emails: one from AWS (sub-account enabled) + one from Salesforce (Voice is on)
-   - Refresh the page after receiving both emails
-
-3. **[MANUAL — Guide me] Confirm Tax Registration Number:**
-   - Setup → Voice → Amazon Setup → Register Tax Number section
-   - Click "Confirm Settings" → Acknowledge
-   - (If button is greyed out, refresh and try again)
-
-4. **[MANUAL — Guide me] Create Amazon Connect Contact Center:**
-   - Setup → Voice → Amazon Contact Centers → click Refresh
-   - In "Create Contact Center" section → click New
-   - Display Name: `Service Cloud Voice`, API Name: `ServiceCloudVoice`
-   - Region: `US West (Oregon)` (recommended)
-   - Click Next → select Admin User as Contact Center Admin → Done
-   - Wait for contact center to appear (may take a few minutes)
-
-5. **Assign Contact Center permissions** (programmatic):
-   - Assign `ContactCenterAdmin` permission set to admin user
-   - Assign `ContactCenterAgent` permission set to rep users
-
-6. **[MANUAL — Guide me] Claim a phone number in Amazon Connect:**
-   - Setup → Voice → Amazon Contact Centers → click your contact center
-   - Click "Telephony Provider Settings" (opens Amazon Connect console via SSO)
-   - In Connect console: Channels → Phone Numbers → Claim a number
-   - Country: United States (+1), Type: DID
-   - Select any available number
-   - Assign Inbound Contact Flow: "Sample SCV Inbound Flow" (temporary — replaced in step 15)
-   - Click Save
-   - NOTE THIS NUMBER — this is the Amazon Connect DID that customers will dial
-
-7. **[MANUAL — Guide me] Configure Basic Queue outbound caller ID:**
-   - In Amazon Connect console: Routing → Queues → Basic Queue → Edit
-   - Outbound Caller ID: your claimed Amazon phone number
-   - Outbound Whisper Flow: `Sample SCV Outbound Flow With Transcription Using Contact Lens`
-   - Save
-
-Phase 2 — Build the Agentforce Agent (programmatic):
-
-8. **Create the agent** — Use the afv-pstn-forward skill:
-   - Deploy EinsteinGptSettings (enable platform + all 4 fields)
-   - Assign permission sets (CopilotSalesforceUser, CopilotSalesforceAdmin, AgentforceServiceAgentBuilder)
-   - Create agent with `plannerType=Atlas__VoiceAgent`
-   - Add BOTH `Messaging` AND `Telephony` plannerSurfaces with escalation flow references
-   - Add topics + Escalation topic with `canEscalate=true`
-   - Activate
-
-9. **[MANUAL — Guide me] Add Telephony Connection in Agentforce Builder:**
-   - DEACTIVATE the agent first (`sf agent deactivate`)
-   - Setup → Agentforce → Agents → open your agent
-   - Connections → Add Connections → + Telephony
-   - Voice Settings: set Stability to 0.85
-   - Configure Escalations → point to the outbound escalation flow
-   - Activate the agent
-
-10. **[MANUAL — Guide me] Get the Agentforce Voice phone number:**
-    - Setup → search "Agentforce Voice" → Agentforce Voice Setup
-    - Toggle ON: "Connect Related Voice Calls" + "Record Voice Calls with Agent"
-    - Click "New Number" to provision the Agentforce Voice number
-    - NOTE THIS NUMBER — Amazon Connect will forward calls here
-
-Phase 3 — Wire the routing (programmatic + manual):
-
-11. **Create Routing Config + Queue** — Use afv-pstn-forward skill:
-    - RoutingModel = `ExternalRouting`
-    - QueueSObject = VoiceCall
-    - Add my user as queue member
-
-12. **Deploy Inbound Voice Routing Omni-Flow** — Use afv-pstn-forward skill:
-    - routingType = `Copilot`
-    - copilotId.setupReferenceType = `BotDefinition`
-    - serviceChannelLabel = `Phone` (NOT `Voice Call`)
-
-13. **Deploy Escalation Flow** — Use afv-pstn-forward skill:
-    - routingType = `QueueBased`
-    - serviceChannelDevName = `sfdc_phone`
-    - MUST deploy BEFORE the planner that references it
-
-14. **Create MessagingChannel (PstnVoice)** — Use afv-pstn-forward skill:
+10. **Create MessagingChannel (PstnVoice)** — Read `afv-pstn-forward` skill:
+    - Create via REST POST (NOT Metadata API)
     - MessageType = `PstnVoice` (NOT `Phone`)
-    - MessagingPlatformKey = Agentforce Voice phone number (from step 10)
+    - MessagingPlatformKey = phone number (E.164)
     - SessionHandlerId = FlowDefinition ID (300... prefix, NOT Flow version 301...)
-    - FallbackQueueId = queue from step 11
-    - IsActive = true
-    - Create via REST POST (not Metadata API deploy)
+    - FallbackQueueId = queue ID
 
-15. **[MANUAL — Guide me] Create the Amazon Connect Contact Flow for AFV:**
-    - In Amazon Connect console: Contact Flows → Create contact flow
-    - Name: "AFV Inbound Flow"
-    - Build the flow:
-      a. Set Logging Behavior → Enable
-      b. Set Recording and Analytics Behavior → Agent + Customer recording ON, Contact Lens enabled (Real-time + Post-call)
-      c. Transfer to phone number → enter the Agentforce Voice number (from step 10), timeout 30s
-      d. On transfer success → Transfer to queue (for escalation return)
-      e. On failure/timeout/error → Disconnect
-    - Save and Publish
-    - Go to Phone Numbers → reassign your DID to use "AFV Inbound Flow"
+=== PATH B2 SPECIFIC: Amazon Connect ===
 
-16. **Verify** — Run SOQL probes:
-    ```
-    sf data query --query "SELECT Id, DeveloperName, SessionHandlerId, FallbackQueueId FROM MessagingChannel WHERE MessageType='PstnVoice'"
-    sf data query --query "SELECT Id, ActiveVersionId FROM FlowDefinition WHERE DeveloperName LIKE '%<agent_name>%'" --use-tooling-api
-    sf data query --query "SELECT Id FROM CallCenter" --target-org <alias>
-    ```
+Read the `amazon-connect-setup` skill for the full guided workflow. It covers:
+- Identity provider setup, Voice enablement, tax registration
+- Contact center creation, phone provisioning, contact flow
+- Integration with the Agentforce agent built in the common steps above
 
 === PATH C: Both ===
 
-Do Path A first (immediate voice testing via widget), then Path B (add phone when ready).
-The agent already has both Messaging + Telephony surfaces from Path A step 1.
+Do Path A first (steps 8-11), then Path B (steps 8-10). The agent already has both Messaging + Telephony surfaces from step 4.
 
 ---
 
-STEP 5 — TEST
+STEP 6 — VERIFY & TEST
 
-Path A testing:
-- Open the website where you deployed the chat widget
-- Click the chat bubble
-- Start a text conversation, then click the microphone/voice button to switch to voice
-- Talk to your agent — test the happy path and escalation
-- Say "transfer me to an agent" to test escalation
+Run verification queries (substitute actual values from your BUILD_PLAN.md):
 
-Path B1 testing (Native PSTN):
-- Call the Agentforce Voice provisioned phone number
-- Talk to your agent — test the happy path and escalation
-- Say "transfer me to a real person" to test escalation
-- Check Omni-Channel in your org to see escalated calls arrive in the queue
+```
+sf data query --query "SELECT Id, DeveloperName FROM BotDefinition WHERE DeveloperName='<agent_name>'" --target-org <alias>
+sf data query --query "SELECT Id, DeveloperName, SessionHandlerType FROM MessagingChannel WHERE DeveloperName='<channel_name>'" --target-org <alias>
+```
 
-Path B2 testing (Amazon Connect):
-- Call the AMAZON CONNECT DID number (NOT the Agentforce Voice number directly)
-- Amazon Connect receives the call and forwards to Agentforce Voice
-- Talk to your agent — test the happy path
-- Say "transfer me to a real person" to test escalation
-- On escalation: call returns to Amazon Connect → routes to human rep via Omni-Channel
-- Open Service Console → set status to Available in Omni-Channel utility bar → receive the escalated call
+Path A: confirm EmbeddedServiceConfig is deployed and channel has sessionHandlerAsa set.
+Path B: confirm PstnVoice channel has correct SessionHandlerId and FallbackQueueId.
 
-Run automated tests:
-- Use /testing-agentforce to create a test suite covering: greeting, topic routing, escalation trigger, out-of-scope refusal
-- Run the tests and iterate on failures
+Test the agent:
+- Path A: Open website → chat widget → voice mode → talk to agent
+- Path B1: Call the provisioned phone number
+- Path B2: Call the Amazon Connect DID number (NOT the AFV number)
+- All paths: test escalation ("transfer me to a person")
+
+Use `/testing-agentforce` to create an automated test suite.
 
 ---
 
-STEP 6 — REPORT
+STEP 7 — REPORT
 
 Tell me:
 - Which path(s) were deployed
 - How to test (URL for Path A, phone number for Path B)
 - What the agent handles and what it refuses
-- Any manual Setup steps still needed (e.g., Omni-Channel login behavior radio button)
+- Any manual Setup steps still needed
 - How to receive escalated conversations (Omni-Channel widget in Service Console)
 - What to do next (add more topics, tune the agent, add the other path)
+
+Update BUILD_PLAN.md with final status.
 
 ---
 
 RULES:
+- **ALWAYS read BUILD_PLAN.md before any deploy or org command.** Verify org alias matches. This prevents deploying to the wrong org.
+- **ALWAYS use `--target-org <alias>` on every sf command.** Never rely on the default org.
 - Use `curl -sL` to fetch remote files (not WebFetch/Read on URLs — those summarize content).
-- Use `--async` + poll for multi-component deploys, never `--wait N` for long deploys.
-- Parse SF CLI JSON output with `jq`, never inline Python.
+- Parse SF CLI JSON output with `jq` or `grep`, never inline Python.
+- To "use a skill": read `~/.claude/skills/<skill-name>/SKILL.md` and follow its instructions. Skills are documents, not executables.
+- `sf agent publish authoring-bundle` is ADLC. `sf agent create` from a spec YAML is the OLD BUILDER — never use it.
+- `sf agent publish authoring-bundle` requires full OAuth (refresh token). Access-token-only auth will fail with "Session expired." Guide user to `sf org login web` if this happens.
+- After publish, the GenAiPlannerBundle `plannerType` will be `Atlas__ConcurrentMultiAgentOrchestration` — you MUST patch it to `Atlas__VoiceAgent` for voice.
+- The planner bundle name after publish may have a version suffix (e.g., `_v4`). Find it by listing `force-app/main/default/genAiPlannerBundles/`.
 - MessagingChannel (PstnVoice) must be created via REST POST, not Metadata API deploy.
 - MessagingChannel (EmbeddedMessaging) is created via Metadata API deploy.
 - Deploy escalation flow BEFORE the planner that references it.
@@ -416,9 +339,8 @@ RULES:
 - `SessionHandlerId` must be a FlowDefinition ID (300...), NOT Flow version (301...).
 - `isVoiceModeEnabled` cannot be deployed via Metadata API — always guide user through Builder UI.
 - Agent drops calls/chats in <15 sec without topics — always add at least one topic.
-- `plannerType` must be `Atlas__VoiceAgent` for voice (not `AiCopilot__ReAct` or `Atlas__ConcurrentMultiAgentOrchestration`).
 - Queue `RoutingModel` must be `ExternalRouting` for PSTN voice (not `LeastActive`).
-- Always run `sf agent deactivate` before deploying planner changes, then `sf agent activate` after.
+- Deactivate agent before deploying planner changes if it's active, then reactivate after.
 - `sf agent deactivate/activate` requires working dir to be an SFDX project directory.
 - Block on manual-step confirmation — don't queue more work until I confirm the UI step is done.
 - Amazon Connect: customers must dial the Amazon Connect DID number, NOT the Agentforce Voice number directly.
@@ -426,5 +348,6 @@ RULES:
 - Amazon Connect: agent must be DEACTIVATED before adding/modifying the telephony connection in Agentforce Builder.
 - Amazon Connect: set voice Stability to 0.85 in the telephony connection settings.
 - Amazon Connect contact center provisioning requires waiting for 2 confirmation emails (AWS + Salesforce) — there is no polling endpoint.
-- If a sub-agent dispatch fails with HTTP 500 twice, fall back to inline execution.
-- If `sf` commands fail with "Session expired" or "INVALID_SESSION_ID", tell the user to grab a fresh token from Agentforce Labs (Org dropdown → Org Details → SF CLI Authentication) or re-run `sf org login web`.
+- If `sf` commands fail with "Session expired" or "INVALID_SESSION_ID", tell the user to re-auth with `sf org login web` or grab a fresh token.
+- If a deploy fails with "DeveloperName already in use", a legacy bot with that name may exist. Use a different developer_name or delete the conflicting bot.
+- The `default_agent_user` in the .agent file MUST be a real user in the target org. Query for it: `sf data query --query "SELECT Username FROM User WHERE Profile.Name='Agentforce Service Agent User' LIMIT 1"`.
